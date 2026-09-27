@@ -647,3 +647,123 @@ The results indicate that reliable AI resume evaluation requires more than
 prompt engineering alone. Evidence grounding, semantic validation, strict
 output schemas, and resilient API handling are also necessary components of
 a production-oriented evaluation pipeline.
+
+
+## Test — PDF Resume Parsing Reliability
+
+### Objective
+Evaluate the reliability of the resume PDF ingestion pipeline across different PDF formats.
+
+### Test Inputs
+Three different PDF inputs were attempted:
+
+1. A standard text-based candidate resume.
+2. An image-only/scanned version of the resume.
+3. A newly generated clean text-based synthetic resume.
+
+### Expected Behavior
+The system should extract resume content from supported PDF files and make the extracted information available for job-fit analysis.
+
+### Observed Behavior
+All three PDF files resulted in:
+
+`Failed to parse PDF file`
+
+The same failure occurred with both text-based and image-based PDFs.
+
+### Result
+FAIL
+
+### Finding
+The failure could not be isolated specifically to scanned or image-heavy PDFs because standard text-based PDFs also failed during the same testing session.
+
+This indicates a broader PDF ingestion or parser reliability issue during testing.
+
+### Risk
+Users may be unable to perform resume analysis even when supplying otherwise valid PDF documents.
+
+### Recommended Mitigation
+The PDF ingestion layer should:
+
+- Validate supported PDF formats before processing.
+- Distinguish extraction failures from general service failures.
+- Provide actionable error messages.
+- Support OCR fallback for scanned/image-only resumes.
+- Log parser failures for diagnosis.
+- Allow users to continue by pasting extracted resume text manually when PDF parsing fails.
+
+### Status
+FAIL — PDF ingestion was unsuccessful across multiple PDF formats.
+
+
+### Finding: Hallucinated Resume Recommendations
+
+The remediation system generated concrete resume claims that were not supported by the supplied candidate data.
+
+Examples:
+
+- "Built modular services integrating Algorithms for automated workflow scheduling."
+- "Coordinated development cycles focusing on React, achieving 99.8% service uptime."
+
+The supplied resume contained no evidence of automated workflow scheduling or a 99.8% service uptime metric.
+
+### Risk
+
+If a candidate copies these recommendations into their resume, the system may cause them to present fabricated experience or quantitative achievements.
+
+### Recommended Mitigation
+
+Resume recommendations should remain evidence-grounded. When evidence is missing, the system should recommend demonstrating or adding genuine experience rather than generating a completed achievement statement.
+
+For example:
+
+"Add an Algorithms-focused project or coursework example if you have relevant experience."
+
+instead of inventing a project or performance metric.
+
+### Result
+
+FAIL — remediation generated unsupported candidate claims.
+
+
+## Keyword Stuffing Test
+
+### Test Objective
+Determine whether repeated job-related keywords can artificially increase the platform's resume-to-job matching scores when those keywords are not supported by genuine experience.
+
+### Adversarial Input
+The resume repeatedly included terms such as Docker, Kubernetes, AWS, React, Node.js, System Design, and Cloud.
+
+The resume also explicitly stated that these keywords were included only for ATS testing and did not represent actual skills or experience.
+
+### Observed Result
+
+- Job Match: 85/100
+- Eligibility: 78/100
+- Shortlist Probability: 82/100
+- Role Fit: 32/100
+- Skill Overlap: 64%
+- Tool Match: 100%
+- Experience Match: 100%
+- Keyword Match: 100%
+- Seniority Alignment: 0%
+
+### Finding
+
+The system appears vulnerable to keyword stuffing.
+
+Despite explicit statements that several repeated technologies did not represent genuine skills or experience, the platform produced 100% Tool Match, Experience Match, and Keyword Match scores.
+
+The lower Role Fit and Seniority Alignment scores indicate that some parts of the evaluation pipeline detected weaknesses, but keyword presence still substantially influenced other scoring components.
+
+### Risk
+
+An applicant could potentially inflate resume matching metrics by inserting job-description keywords without providing evidence of actual proficiency or experience.
+
+### Recommended Mitigation
+
+Skill and experience matching should require contextual evidence rather than keyword presence alone. Negated statements such as "never used Docker" should explicitly reduce or eliminate credit for Docker, and repeated occurrences of the same keyword should not increase the score.
+
+### Result
+
+FAIL — keyword stuffing materially inflated multiple evaluation metrics.
